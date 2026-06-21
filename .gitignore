@@ -1,0 +1,13 @@
+# Local-only material; keep the public example repo clean.
+.private/
+
+# OS/editor noise.
+.DS_Store
+
+# Credentials and local runtime files.
+.env
+.env.*
+*.secret
+*.secret.*
+*.local
+*.local.*
