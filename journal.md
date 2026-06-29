@@ -263,3 +263,31 @@ Checks before publishing:
 - no `.DS_Store` files were present.
 
 Result: the repository was published as `https://github.com/fleytman/thaw-problems` with `main` tracking `origin/main`.
+
+## 2026-06-25 - #702 Status Update, Repo Refresh, And Code Mechanism
+
+The user focused on problem area 2 (visible/hidden drift, candidate #702) and noted that their symptom appears after wake-from-sleep, suggesting it may share a trigger with the spacing relaunch wave (#591). They asked to check the issue thread for continuation, update the local Thaw clone to the latest, and look for the code path that can make a visible item disappear into hidden, given that the original Ice did not seem to have this problem.
+
+GitHub check (via `gh`):
+
+- #702 is now `CLOSED` (2026-06-23 21:44Z). The thread continued actively with maintainers `nightah`/`stonerl` and reporters `nk-tedo-001`, `diazdesandi`.
+- PR #743 `fix(menubar): defer saved-layout apply/persist on unsettled or cross-display geometry and clear stuck profile flag` was `MERGED` 2026-06-24 07:39Z and explicitly `Closes #702`.
+- The fix is not in a release yet: tag `2.0.0-rc.1` (`90068377`, 2026-06-16) predates the fix (`git merge-base --is-ancestor 4c04159e 2.0.0-rc.1` is false). The maintainer asks to use the latest DMG from #702 until RC2.
+- Adjacent fixes in the same family: #742 (notch overflow, merged 06-24), #698 (don't re-sort saved layout on active-display switch, merged 06-10). Open PR #716 targets adjacent #714.
+
+Local clone refresh:
+
+- `~/Thaw`: `git fetch --all --prune` plus a fast-forward of `development` from `6a1e3dc4` to `4c04159e`. `development` is Thaw's active branch; local `main` (release) is intentionally behind and does not contain the fix yet.
+
+Code mechanism (confirmed):
+
+- Thaw added a saved-layout persist/restore subsystem absent in Ice: `LayoutSolver.swift`, `LayoutReconciler.swift`, `PendingLedger.swift`, a persisted `savedSectionOrder` (UserDefaults key `MenuBarItemManager.savedSectionOrder`), and `applySavedLayout` / `saveSectionOrder`.
+- Upstream Ice (HEAD `f063ee7`, 2024-07-05) has none of these; item category there is positional relative to its own control items, with no automatic persist/restore of third-party layout.
+- On multi-display relocation / wake / display reconnect, macOS transiently un-homes off-screen hidden items. If a cache tick lands in that transient, either the persist path bakes the un-hidden items into the saved layout as visible, or a bulk apply cannot converge across two displays and the corrupted state is persisted. A previously visible item then ends up in hidden and is locked in.
+- PR #743 gates both paths via `LayoutSolver.itemsSpanMultipleDisplays` and `LayoutSolver.isMenuBarGeometryReady`, and fixes a stuck `isApplyingProfileLayout` flag via `concludeProfileApplyWithoutMoves`.
+
+Interpretation:
+
+- The user's wake-from-sleep hypothesis holds: the code comments list display reconnect and macOS re-spawning the bar as triggers, and wake-from-sleep with two displays is exactly that precondition. #591 (relaunch wave) and #702 (drift) share a trigger environment but are distinct code paths. This also explains why Ice did not show the problem: the regression class lives in Thaw-introduced code.
+
+Artifacts updated: `tracker(-ru)`, `journal-ru`, `visible-hidden-drift`, the #702 note, and a new `evidence/code/visible-hidden-mechanism-and-ice-comparison.md`.

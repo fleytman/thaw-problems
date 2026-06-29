@@ -1,6 +1,8 @@
 # Visible / Hidden Drift
 
-Updated: 19.06.2026 21:44:35 +05
+Updated: 25.06.2026 09:43:00 +05
+
+> Update 25.06.2026: #702 is now CLOSED, fixed by PR #743 (merged into `development`, `Closes #702`), but the fix is not in a release yet (it postdates `2.0.0-rc.1`; maintainer asks to use the latest DMG until RC2). Code-level mechanism and Ice comparison: `evidence/code/visible-hidden-mechanism-and-ice-comparison.md`. The user's symptom appears after wake-from-sleep, which shares the multi-display reattach trigger environment with the spacing relaunch wave (#591).
 
 ## Problem
 

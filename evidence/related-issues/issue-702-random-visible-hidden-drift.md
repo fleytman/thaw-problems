@@ -6,7 +6,9 @@ Issue: https://github.com/stonerl/Thaw/issues/702
 
 Title: `[Bug] The menu bar items change position on their own.`
 
-Состояние на последней проверке: `OPEN`
+Состояние на последней проверке: `CLOSED` (23.06.2026 21:44Z)
+
+> Обновление 25.06.2026: issue закрыт. Закрыт через PR #743 `fix(menubar): defer saved-layout apply/persist on unsettled or cross-display geometry and clear stuck profile flag` (`MERGED` 24.06.2026, явно `Closes #702`). Fix в `development` (`4c04159e`), но НЕ в релизе: тег `2.0.0-rc.1` предшествует fix, maintainer просит до RC2 пользоваться последним DMG из issue. Разбор кода и сравнение с Ice: `../code/visible-hidden-mechanism-and-ice-comparison.md`.
 
 Метки: `bug`, `P2`, `macos-26`
 

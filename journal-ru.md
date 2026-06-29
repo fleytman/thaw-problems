@@ -482,3 +482,46 @@ Attempt:
 - Создан публичный GitHub repo и запушен `main`.
 
 Result: Repo опубликован как `https://github.com/fleytman/thaw-problems`; `HEAD` совпадает с `origin/main`. В публичной истории не найдено приватных path/credential markers по проверенным patterns; локальные скрытые материалы остались только в ignored `.private/`.
+
+## 25.06.2026 09:43 +05 - Claude (kiro-cli), session id not recorded
+
+Пользователь сфокусировал работу на проблеме 2 (visible/hidden drift, кандидат #702) и выдвинул гипотезу, что у него это проявляется после wake-from-sleep, то есть возможно связано со spacing/relaunch wave (#591). Попросил: проверить продолжение обсуждения в issues, обновить локальный клон Thaw до последнего, поискать в коде механизм пропадания visible-элемента, учитывая, что в оригинальном Ice такой проблемы он не помнит.
+
+### Вопрос на этот момент
+
+Каков актуальный статус #702 (visible/hidden drift), есть ли продолжение обсуждения и влитый fix, и подтверждается ли на уровне кода, что механизм пропадания visible -> hidden — это Thaw-специфика, которой не было в Ice.
+
+### Что проверено (GitHub, через `gh` + токен из 1Password)
+
+- #702 теперь `CLOSED` (23.06.2026 21:44Z), метки `bug`, `P2`, `macos-26`. Обсуждение активно продолжилось: maintainers `nightah`/`stonerl`, репортеры `nk-tedo-001`, `diazdesandi`.
+- PR #743 `fix(menubar): defer saved-layout apply/persist on unsettled or cross-display geometry and clear stuck profile flag` — `MERGED` 24.06.2026 07:39Z, head-ветка `fix/defer-cross-display-apply-and-gate-persist`, явно `Closes #702`.
+- Fix НЕ в релизе: тег `2.0.0-rc.1` (`90068377`, 16.06.2026) предшествует fix; `git merge-base --is-ancestor 4c04159e 2.0.0-rc.1` -> false. Maintainer (`nightah`) прямо пишет в #702: до RC2 использовать последний DMG из issue, RC1 нужных изменений не содержит.
+- Соседние fixes того же семейства: #742 (keep visible control item in place during notch overflow, merged 24.06), #698 (don't re-sort saved layout on active-display switch, merged 10.06), #681/#677/#679 (notch/relaunch defer). Открытый PR #716 (`fix/saved-layout-divergence-gate`) — для #714 (hidden items briefly appear after status item churn), направление симптома обратное.
+
+### Локальный клон
+
+- `~/Thaw`: `git fetch --all --prune` + fast-forward `development` с `6a1e3dc4` -> `4c04159e` (последний на 24.06). Это активная ветка Thaw; локальный `main` (release) намеренно отстаёт (`644642bb`, 30.05.2026), fix туда ещё не попал. Появились новые ветки: `fix/defer-cross-display-apply-and-gate-persist`, `fix/defer-layout-on-unsettled-geometry`, `fix/keep-visible-control-item-during-notch-overflow`, `diag/680-avp-display-inventory`.
+
+### Код: механизм visible -> hidden (подтверждён)
+
+- Thaw добавил подсистему сохранения/восстановления layout, которой в Ice нет: файлы `Thaw/MenuBar/MenuBarItems/LayoutSolver.swift`, `LayoutReconciler.swift`, `PendingLedger.swift`; персист `savedSectionOrder` в `UserDefaults` (ключ `MenuBarItemManager.savedSectionOrder`); функции `applySavedLayout(...)` и `saveSectionOrder(from:)`.
+- Оригинальный Ice (HEAD `f063ee7`, 05.07.2024) этого не содержит вообще: grep по `LayoutSolver`/`SavedLayout`/`applySavedLayout` пуст; у Ice категория предмета определяется позиционно относительно своих control items, без авто-персиста и авто-восстановления чужого layout.
+- Механизм поломки: cache cycle (~5с) пишет текущую категоризацию через `saveSectionOrder(from:)` и применяет сохранённый порядок через `applySavedLayout` по триггерам windowID change (app quit/relaunch) или layout divergence. При multi-display relocation / wake / display reconnect macOS асинхронно мигрирует status item windows между экранами и временно "un-homes" off-screen hidden items. Если cache tick попадает в этот transient:
+  - write path запекает раскрытые items в `savedSectionOrder` как visible;
+  - либо `applySavedLayout` диспатчит bulk apply на items, растянутых по двум дисплеям, который не сходится, оставляя items на чужом экране, где они читаются как un-hidden; следующий persist пишет это испорченное состояние.
+  Итог: ранее visible item оказывается перемещён в hidden (или наоборот), и это закрепляется на диске.
+- PR #743 добавляет гейты в оба пути (apply и persist):
+  - Display-spread gate `LayoutSolver.itemsSpanMultipleDisplays(...)` — не применять/не писать, пока items на двух дисплеях (relocation in progress).
+  - Geometry-readiness gate `LayoutSolver.isMenuBarGeometryReady(...)` — на notched display не применять, пока геометрия не устаканилась (display reconnect / Control Center churn).
+  - `concludeProfileApplyWithoutMoves(...)` — чинит залипание `isApplyingProfileLayout=true` после no-moves apply (частого на display reconnect), которое навсегда блокировало `applySavedLayout` до конца сессии ("stuck profile flag").
+
+### Интерпретация и связь с wake-from-sleep
+
+- Комментарии в коде прямо перечисляют триггеры этого пути: display reconnect, screen lock/unlock cycles, macOS re-spawning the bar. Wake-from-sleep с несколькими дисплеями = display reattach + menu bar relocation + transient straddling — ровно precondition этого бага.
+- Значит гипотеза пользователя обоснована: #591 (relaunch wave после wake) и #702 (visible/hidden drift) делят общий триггер-environment (multi-display reattach при пробуждении), хотя это разные code paths (spacing apply vs saved-layout apply/persist).
+- Это же объясняет "в Ice такого не было": подсистема авто-персиста/восстановления layout — нововведение Thaw, и именно в ней живёт данный класс регрессий.
+
+### Результат
+
+- Статус кандидата #702: closed, fix влит в `development` (PR #743), в релиз (RC) ещё не вошёл.
+- Practical next: дождаться RC2 / beta с #743 (+#742), на своём setup проверить wake-from-sleep с двумя дисплеями; если повторится — собрать логи именно с этой сборки и сравнить с #702, не открывать новый report до проверки на сборке с fix.

@@ -1,6 +1,6 @@
 # Tracker
 
-Updated: 2026-06-21 12:07:03 +05
+Updated: 2026-06-25 09:43:00 +05
 
 ## Current Question
 
@@ -39,7 +39,11 @@ PR #691 likely closes the main UX/safety gap described by the user:
 - User clarification: the interesting case is not a single specific app repeatedly moving to hidden, but a random visible item disappearing and later being found in hidden settings.
 - Best related issue for that case: #702 https://github.com/stonerl/Thaw/issues/702
 - Dedicated #702 note: `evidence/related-issues/issue-702-random-visible-hidden-drift.md`
-- User stance on #702: treat it as similar, but do not test maintainer DMG builds; wait for maintainers to validate, close, or merge a fix.
+- UPDATED 2026-06-25: #702 is now `CLOSED` (2026-06-23 21:44Z). Closed by PR #743 `fix(menubar): defer saved-layout apply/persist on unsettled or cross-display geometry and clear stuck profile flag`, `MERGED` 2026-06-24 07:39Z, explicitly `Closes #702`.
+- Fix is NOT in a release yet: tag `2.0.0-rc.1` (`90068377`, 2026-06-16) predates the fix (`4c04159e`); the maintainer asks to use the latest DMG from #702 until RC2.
+- Adjacent fixes in the same family: #742 (keep visible control item during notch overflow, merged 06-24), #698 (don't re-sort saved layout on active-display switch, merged 06-10). Open PR #716 targets adjacent #714 (hidden items briefly appear).
+- User clarification 2026-06-25: the symptom appears after wake-from-sleep, so visible/hidden drift and the spacing relaunch wave may share a trigger environment (multi-display reattach on wake). Confirmed at code level: see `evidence/code/visible-hidden-mechanism-and-ice-comparison.md`.
+- User stance on #702: do not test custom maintainer DMGs; wait for RC2/beta with #743 and verify the wake-from-sleep two-display scenario on the real setup.
 - App-specific visible -> hidden examples: #651 Little Snitch, #605 CodexBar, #480 Toggl, #607/#707 OneDrive. Useful as background, but weaker as primary references for random drift.
 
 ## Root Entry Points
@@ -74,6 +78,8 @@ PR #691 likely closes the main UX/safety gap described by the user:
 - Wake-from-sleep equal-spacing comment: `evidence/github/issue-591-comment-4679212411.md`
 - Visible/hidden issue search: `evidence/related-issues/visible-hidden-search-2026-06-19.md`
 - Dedicated #702 document: `evidence/related-issues/issue-702-random-visible-hidden-drift.md`
+- Visible -> hidden code mechanism and Ice comparison: `evidence/code/visible-hidden-mechanism-and-ice-comparison.md`
+- #702 closed by PR #743 (merged into `development`, HEAD `4c04159e`).
 - Full Thaw public-demo debrief: `debrief/session-debrief.md`
 - Thaw-specific extracted lessons/statistics: `debrief/lessons.md`
 
@@ -88,6 +94,10 @@ PR #691 likely closes the main UX/safety gap described by the user:
 - Equal spacing should no longer be described as a universal guarantee: a later #591 comment reported wake-from-sleep relaunch on `2.0b15` even with equal spacing across displays.
 - Visible/hidden drift looks adjacent but distinct. There are probably at least two branches: saved-state corruption during multi-display/menu-bar relocation (#702/#675) and unstable app/status-item identification (#707/#651/#605/#480).
 - For the user case “a random visible item disappeared and later appeared in hidden”, #702 is more relevant than app-specific issues.
+- UPDATED 2026-06-25: visible/hidden drift is Thaw-specific. Thaw added a saved-layout persist/restore subsystem (`LayoutSolver.swift`, `LayoutReconciler.swift`, `PendingLedger.swift`, `savedSectionOrder`, `applySavedLayout`/`saveSectionOrder`) that does not exist in upstream Ice (HEAD `f063ee7`, 2024-07-05). This supports the user's recollection that Ice did not have this problem: the regression class lives in new code.
+- Mechanism: during multi-display relocation / wake / display reconnect, macOS transiently un-homes off-screen hidden items. If a cache tick lands in that transient, either the persist path bakes the un-hidden items into the saved layout as visible, or a bulk apply cannot converge across two displays and the corrupted state is persisted. A previously visible item then ends up in hidden and is locked in.
+- PR #743 gates both paths (apply and persist) via `LayoutSolver.itemsSpanMultipleDisplays` and `LayoutSolver.isMenuBarGeometryReady`, and fixes a stuck `isApplyingProfileLayout` flag (`concludeProfileApplyWithoutMoves`).
+- Link to #591: wake-from-sleep with two displays is a shared trigger environment for the spacing relaunch wave and visible/hidden drift, although they are distinct code paths.
 
 ## What Contradicts The Current Model
 
@@ -101,10 +111,12 @@ PR #691 likely closes the main UX/safety gap described by the user:
 - Which Thaw version will ship PR #691, and whether the user will test that build on their setup.
 - Whether to answer the later #591 comment or wait for a build with PR #691 and ask for verification there.
 - How global `Apply to All Displays` behaves when confirmations are disabled; worth hands-on testing, but not a merge blocker.
-- If the user sees random visible -> hidden drift again, compare with #702 first. Use #707/#651/#605/#480 only if the symptom is tied to a specific app.
-- Do not actively participate in #702 right now: the user is not ready to test custom DMGs, so wait for maintainer validation / merge.
+- If the user sees random visible -> hidden drift again, compare with #702 (closed by #743) first. Use #707/#651/#605/#480 only if the symptom is tied to a specific app.
+- #702 is closed and the fix is merged into `development`, but not into a release: open question is which version (RC2/beta) will ship #743 and whether the symptom reproduces on a build that includes the fix.
+- Whether, once RC2/beta with #743 ships, to test the wake-from-sleep two-display scenario on the real setup and, if it reproduces, collect logs from that exact build for #702.
 - After release, consider adding a short follow-up comment in #685/#686 with real installed-build verification.
 
 ## Next Step
 
-Wait for a release/build containing PR #691 and, separately, a possible #702 fix. For #691, test display connect/disconnect, wake-from-sleep, and manual Apply scenarios on the real setup. For visible/hidden category drift, wait until maintainers validate or merge the #702 fix; do not test custom DMGs right now.
+- Visible/hidden drift (#702): wait for RC2/beta with PR #743 (+#742), then test wake-from-sleep with two displays and manual display connect/disconnect on the real setup. If the symptom reproduces on a build that includes the fix, collect logs from that exact build and compare with #702 instead of opening a new report prematurely. Do not test custom DMGs right now.
+- Spacing relaunch wave (#591/#691): wait for a build with #691 and test display connect/disconnect, wake-from-sleep, and manual Apply.

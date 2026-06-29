@@ -1,6 +1,6 @@
 # Tracker (RU)
 
-Updated: 21.06.2026 12:07:03 +05
+Updated: 25.06.2026 09:43:00 +05
 
 ## Language Note
 
@@ -45,7 +45,11 @@ PR #691 практически закрывает основной баг/UX-gap
 - Уточнение пользователя: интересует не app-specific case, где одно конкретное приложение стабильно уходит в hidden, а случайное исчезновение visible item, который потом находится в hidden в настройках.
 - Лучший текущий related issue под этот кейс: #702 https://github.com/stonerl/Thaw/issues/702
 - Отдельный документ по #702: `evidence/related-issues/issue-702-random-visible-hidden-drift.md`
-- User stance по #702: считать issue похожим, но не тестировать maintainer DMG builds; ждать, пока maintainers сами протестят/закроют/вольют fix.
+- ОБНОВЛЕНО 25.06.2026: #702 теперь `CLOSED` (23.06.2026 21:44Z). Закрыт через PR #743 `fix(menubar): defer saved-layout apply/persist on unsettled or cross-display geometry and clear stuck profile flag`, `MERGED` 24.06.2026 07:39Z, явно `Closes #702`.
+- Fix НЕ в релизе: тег `2.0.0-rc.1` (`90068377`, 16.06.2026) предшествует fix (`4c04159e`); maintainer просит до RC2 использовать последний DMG из #702.
+- Соседние fixes семейства: #742 (keep visible control item during notch overflow, merged 24.06), #698 (don't re-sort saved layout on active-display switch, merged 10.06). Открытый PR #716 — для смежного #714 (hidden items briefly appear).
+- Уточнённая гипотеза пользователя 25.06: его кейс проявляется после wake-from-sleep, поэтому visible/hidden drift и spacing relaunch wave могут делить общий триггер (multi-display reattach при пробуждении). Подтверждено на уровне кода: см. `evidence/code/visible-hidden-mechanism-and-ice-comparison.md`.
+- User stance по #702: не тестировать кастомные maintainer DMG; ждать RC2/beta с #743 и проверять на своём setup сценарий wake-from-sleep с двумя дисплеями.
 - Примеры visible -> hidden, привязанные к конкретным приложениям: #651 Little Snitch, #605 CodexBar, #480 Toggl, #607/#707 OneDrive. Они полезны как фон, но хуже подходят как primary reference для случайного drift.
 
 ## Root Entry Points
@@ -95,6 +99,10 @@ PR #691 практически закрывает основной баг/UX-gap
 - Одинаковый spacing больше нельзя подавать как универсальную гарантию: позже другой пользователь сообщил о relaunch after wake-from-sleep на `2.0b15` даже при одинаковом spacing на всех дисплеях.
 - Visible/hidden drift выглядит отдельным, но соседним семейством багов. Вероятно есть минимум две ветки: corruption состояния при multi-display/menu-bar relocation (#702/#675) и нестабильная идентификация app/status-item (#707/#651/#605/#480).
 - Для пользовательского кейса “случайное visible приложение пропало и нашлось в hidden” #702 релевантнее app-specific issues.
+- ОБНОВЛЕНО 25.06.2026: visible/hidden drift — Thaw-специфика. Thaw добавил подсистему авто-персиста/восстановления layout (`LayoutSolver.swift`, `LayoutReconciler.swift`, `PendingLedger.swift`, `savedSectionOrder`, `applySavedLayout`/`saveSectionOrder`), которой в оригинальном Ice (HEAD `f063ee7`, 05.07.2024) нет вообще. Поэтому “в Ice такого не было” обоснованно: класс регрессии живёт в новом коде.
+- Механизм: при multi-display relocation / wake / display reconnect macOS временно un-homes off-screen hidden items; если cache tick попадает в transient, либо persist запекает раскрытые items как visible, либо bulk apply не сходится на двух дисплеях и испорченное состояние сохраняется. Так visible item оказывается в hidden и закрепляется.
+- PR #743 загейтил оба пути (apply и persist) через `LayoutSolver.itemsSpanMultipleDisplays` и `LayoutSolver.isMenuBarGeometryReady`, плюс починил залипший флаг `isApplyingProfileLayout` (`concludeProfileApplyWithoutMoves`).
+- Связь с #591: wake-from-sleep с двумя дисплеями — общий триггер-environment для spacing relaunch wave и visible/hidden drift, хотя это разные code paths.
 
 ## What Contradicts The Current Model
 
@@ -108,10 +116,13 @@ PR #691 практически закрывает основной баг/UX-gap
 - В какой версии Thaw PR #691 попадёт к пользователям и будет ли пользователь тестировать эту сборку на своём setup.
 - Нужно ли отвечать в #591 на comment `4679212411`, или лучше дождаться версии с PR #691 и попросить проверить именно её.
 - Как реально поведёт себя global `Apply to All Displays` при отключённых confirmations; это стоит проверять hands-on, но сейчас не блокирует merge.
-- Если у пользователя проявится “случайное visible приложение ушло в hidden”, лучше сначала сравнить с #702. #707/#651/#605/#480 использовать только если симптом стабильно привязан к конкретному приложению.
-- По #702 сейчас не предпринимать активных действий: пользователь не готов тестировать custom DMG, поэтому ждём maintainer validation / merge.
+- Если у пользователя проявится “случайное visible приложение ушло в hidden”, лучше сначала сравнить с #702 (закрыт через #743). #707/#651/#605/#480 использовать только если симптом стабильно привязан к конкретному приложению.
+- #702 закрыт и fix влит в `development`, но не в релиз: открытый вопрос — в какой версии (RC2/beta) #743 дойдёт до пользователя и воспроизведётся ли симптом на сборке с fix.
+- Нужно ли после выхода RC2/beta с #743 проверить wake-from-sleep с двумя дисплеями на своём setup и, если повторится, собрать логи именно с этой сборки для #702.
 - Нужно ли после релиза добавить короткий follow-up comment в #685/#686 с фактической верификацией поведения на installed build.
 
 ## Next Step
 
-Практический next step: дождаться сборки/релиза с PR #691 и возможного fix по #702. Для #691 протестировать display connect/disconnect, wake-from-sleep и manual Apply сценарии на реальном setup. Для visible/hidden category drift — ждать, пока maintainers подтвердят/вольют #702 fix; custom DMG сейчас не тестировать.
+Практический next step:
+- Visible/hidden drift (#702): дождаться RC2 / beta с PR #743 (+#742), затем проверить на своём setup wake-from-sleep с двумя дисплеями и manual display connect/disconnect. Если симптом повторится на сборке с fix — собрать логи именно с неё и сравнить с #702, не открывать новый report заранее. Кастомные DMG сейчас не тестировать.
+- Spacing relaunch wave (#591/#691): дождаться сборки с #691, протестировать display connect/disconnect, wake-from-sleep и manual Apply.
