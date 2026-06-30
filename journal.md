@@ -291,3 +291,16 @@ Interpretation:
 - The user's wake-from-sleep hypothesis holds: the code comments list display reconnect and macOS re-spawning the bar as triggers, and wake-from-sleep with two displays is exactly that precondition. #591 (relaunch wave) and #702 (drift) share a trigger environment but are distinct code paths. This also explains why Ice did not show the problem: the regression class lives in Thaw-introduced code.
 
 Artifacts updated: `tracker(-ru)`, `journal-ru`, `visible-hidden-drift`, the #702 note, and a new `evidence/code/visible-hidden-mechanism-and-ice-comparison.md`.
+
+## 2026-06-30 - Status Re-check (No Change)
+
+Re-checked #702 status on request.
+
+- #702 is still `CLOSED` (since 2026-06-23); no new comments after 2026-06-24.
+- No release with the fix yet: the latest tag/release is `2.0.0-rc.1` (2026-06-16, pre-release); RC2 has not been cut. The #743 fix (`4c04159e`) is in none of the tags (rc.1 / beta.15 / beta.14 / beta.13).
+- `development` only advanced by `9a5f1beb` (`docs: update README with macOS 27 status link`), unrelated to the bug; `MenuBar/MenuBarItems/` untouched.
+- No new related visible/hidden/wake issues.
+
+Conclusion: effectively no change since 2026-06-24/25; the fix is ready in `development` but has not shipped. Stance unchanged: wait for RC2/beta with #743 and test the wake-from-sleep two-display scenario.
+
+Follow-up scheduled for ~2026-07-07: re-check #702 / whether RC2 shipped / a tag containing #743 (a macOS reminder was also set).

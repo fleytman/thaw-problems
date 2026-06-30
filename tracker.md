@@ -120,3 +120,4 @@ PR #691 likely closes the main UX/safety gap described by the user:
 
 - Visible/hidden drift (#702): wait for RC2/beta with PR #743 (+#742), then test wake-from-sleep with two displays and manual display connect/disconnect on the real setup. If the symptom reproduces on a build that includes the fix, collect logs from that exact build and compare with #702 instead of opening a new report prematurely. Do not test custom DMGs right now.
 - Spacing relaunch wave (#591/#691): wait for a build with #691 and test display connect/disconnect, wake-from-sleep, and manual Apply.
+- Scheduled re-check ~2026-07-07: #702 status, whether RC2/a release shipped, and whether any tag contains #743. Last checked 2026-06-30 — no change, RC2 not out.

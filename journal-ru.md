@@ -525,3 +525,18 @@ Result: Repo опубликован как `https://github.com/fleytman/thaw-pro
 
 - Статус кандидата #702: closed, fix влит в `development` (PR #743), в релиз (RC) ещё не вошёл.
 - Practical next: дождаться RC2 / beta с #743 (+#742), на своём setup проверить wake-from-sleep с двумя дисплеями; если повторится — собрать логи именно с этой сборки и сравнить с #702, не открывать новый report до проверки на сборке с fix.
+
+## 30.06.2026 16:33 +05 - Claude (kiro-cli), session id not recorded
+
+Повторная проверка статуса #702 (visible/hidden drift) по просьбе пользователя.
+
+Проверено (GitHub):
+
+- #702 по-прежнему `CLOSED` (с 23.06.2026), новых комментариев после 24.06 нет.
+- Релиза с fix всё ещё нет: последний тег/релиз — `2.0.0-rc.1` (16.06.2026, pre-release), RC2 не нарезан. fix #743 (`4c04159e`) не входит ни в один тег (rc.1 / beta.15 / beta.14 / beta.13 — нет).
+- `development` сдвинулся только на `9a5f1beb` (`docs: update README with macOS 27 status link`), к багу не относится; файлы `MenuBar/MenuBarItems/` не трогались.
+- Новых related-issue по visible/hidden/wake нет.
+
+Вывод: с 24-25.06 изменений по сути нет; fix готов в `development`, но в релиз не дошёл. Позиция прежняя: ждать RC2/beta с #743 и проверить wake-from-sleep с двумя дисплеями.
+
+Поставлен follow-up: перепроверить статус (#702 / выход RC2 / тег с #743) ~07.07.2026 (плюс напоминание в macOS Reminders).
